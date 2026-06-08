@@ -24,17 +24,35 @@ autenticación con **2FA (TOTP)**, y log de auditoría inmutable.
   `react-pdf` + capa CSS adicional.
 - **Log de auditoría inmutable** (`/audit`) con filtros y exportación a CSV. Sin
   endpoints de UPDATE/DELETE.
+- **Ciclo completo de reuniones**: crear sesión + agenda, convocar (asistencias +
+  email best-effort), estados (Borrador→Convocada→En curso→Cerrada→Aprobada),
+  asistencia con alerta de quórum, **votaciones nominativas** (auditor no vota,
+  resultados solo al cerrar), y **editor de actas con Tiptap** con flujo de
+  aprobación (solo presidente aprueba).
+- **Módulo de IA (Claude / Anthropic)**: botón "Generar resumen con IA" en el acta
+  y **búsqueda semántica** en lenguaje natural sobre los documentos del comité.
+  Modelo `claude-sonnet-4-6`. Requiere `ANTHROPIC_API_KEY` (si falta, devuelve un
+  mensaje claro sin romper la app).
 - **Dashboard** corporativo con navegación por comité y panel de administración
   (lista de usuarios y comités).
 - **Headers de seguridad** (CSP, X-Frame-Options, nosniff) y **rate limiting** en
   el login.
 
+### Para activar la IA
+
+Pon tu clave de Anthropic en `.env`:
+
+```env
+ANTHROPIC_API_KEY="sk-ant-..."
+```
+
+Sin la clave, el resto de la plataforma funciona igual; solo el resumen de actas
+y la búsqueda semántica quedan deshabilitados con un aviso.
+
 ### Pendiente para las siguientes iteraciones
 
-Ciclo completo de sesiones (convocatoria por email, asistencia, votaciones,
-editor de actas con Tiptap), módulo de IA (resumen de actas y búsqueda
-semántica) y CRUD de administración. La estructura y los modelos de datos ya
-están listos para construirlos.
+CRUD completo de administración (crear comités, usuarios y membresías desde la
+UI; hoy se hace vía seed) e integraciones de fase 2 (Teams, firma digital, SSO).
 
 ---
 
