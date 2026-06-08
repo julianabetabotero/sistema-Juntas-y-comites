@@ -43,6 +43,8 @@ export default auth((req) => {
 });
 
 export const config = {
-  // Ejecuta el middleware en todo excepto assets estáticos y la API de NextAuth.
-  matcher: ["/((?!api/auth|_next/static|_next/image|favicon.ico|.*\\.).*)"],
+  // Ejecuta el middleware solo en páginas (no en /api ni en assets estáticos).
+  // Las rutas /api validan su propia sesión y devuelven 401/403 en JSON; si el
+  // middleware las interceptara, la pantalla de 2FA no podría pedir su QR.
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico|.*\\.).*)"],
 };
