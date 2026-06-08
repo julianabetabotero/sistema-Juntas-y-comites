@@ -89,6 +89,16 @@ export function canManageCommittee(role: string): boolean {
   );
 }
 
+/** Exige que el usuario sea SUPER_ADMIN. Lanza ForbiddenError si no lo es. */
+export async function requireSuperAdmin(userId: string): Promise<void> {
+  if (!userId) throw new UnauthorizedError();
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new UnauthorizedError("Usuario no encontrado");
+  if (user.role !== GlobalRole.SUPER_ADMIN) {
+    throw new ForbiddenError("Requiere permisos de super administrador");
+  }
+}
+
 /** Lista de IDs de comités activos del usuario (para la sesión/sidebar). */
 export async function getUserCommitteeIds(userId: string): Promise<string[]> {
   const user = await prisma.user.findUnique({ where: { id: userId } });

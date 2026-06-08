@@ -5,7 +5,9 @@ import {
   GlobalRole,
   type CommitteeType,
 } from "@/lib/enums";
+import Link from "next/link";
 import AccessDenied from "@/components/AccessDenied";
+import NewCommitteeForm from "@/components/admin/NewCommitteeForm";
 
 export default async function AdminCommitteesPage() {
   const session = await auth();
@@ -24,17 +26,23 @@ export default async function AdminCommitteesPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl text-slate-100">Comités</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {committees.length} cuerpo(s) colegiado(s). La creación desde la
-          interfaz llega en la siguiente iteración.
-        </p>
+      <header className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl text-slate-100">Comités</h1>
+          <p className="mt-1 text-sm text-slate-500">
+            {committees.length} cuerpo(s) colegiado(s).
+          </p>
+        </div>
+        <NewCommitteeForm />
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2">
         {committees.map((c) => (
-          <div key={c.id} className="card p-5">
+          <Link
+            key={c.id}
+            href={`/admin/committees/${c.id}`}
+            className="card p-5 transition-colors hover:border-gold/40"
+          >
             <p className="text-xs uppercase tracking-wide text-gold">
               {CommitteeTypeLabel[c.type as CommitteeType] ?? c.type}
             </p>
@@ -48,7 +56,7 @@ export default async function AdminCommitteesPage() {
               <span>{c._count.documents} documentos</span>
               <span>Quórum {c.quorumPercentage}%</span>
             </div>
-          </div>
+          </Link>
         ))}
       </div>
     </div>

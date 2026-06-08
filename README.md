@@ -33,8 +33,9 @@ autenticación con **2FA (TOTP)**, y log de auditoría inmutable.
   y **búsqueda semántica** en lenguaje natural sobre los documentos del comité.
   Modelo `claude-sonnet-4-6`. Requiere `ANTHROPIC_API_KEY` (si falta, devuelve un
   mensaje claro sin romper la app).
-- **Dashboard** corporativo con navegación por comité y panel de administración
-  (lista de usuarios y comités).
+- **Dashboard** corporativo con navegación por comité y **panel de administración**
+  (solo super_admin): crear comités, crear usuarios y **gestionar membresías**
+  (asignar/quitar miembros con su rol).
 - **Headers de seguridad** (CSP, X-Frame-Options, nosniff) y **rate limiting** en
   el login.
 
@@ -49,10 +50,10 @@ ANTHROPIC_API_KEY="sk-ant-..."
 Sin la clave, el resto de la plataforma funciona igual; solo el resumen de actas
 y la búsqueda semántica quedan deshabilitados con un aviso.
 
-### Pendiente para las siguientes iteraciones
+### Fuera del alcance (fase 2, según la spec)
 
-CRUD completo de administración (crear comités, usuarios y membresías desde la
-UI; hoy se hace vía seed) e integraciones de fase 2 (Teams, firma digital, SSO).
+Integración con Microsoft Teams, firma digital externa (DocuSign/Certicámara),
+app móvil nativa y SSO/SAML empresarial.
 
 ---
 

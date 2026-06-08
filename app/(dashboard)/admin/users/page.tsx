@@ -2,6 +2,7 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { GlobalRole } from "@/lib/enums";
 import AccessDenied from "@/components/AccessDenied";
+import NewUserForm from "@/components/admin/NewUserForm";
 
 export default async function AdminUsersPage() {
   const session = await auth();
@@ -16,12 +17,12 @@ export default async function AdminUsersPage() {
 
   return (
     <div className="space-y-6">
-      <header>
-        <h1 className="text-2xl text-slate-100">Usuarios</h1>
-        <p className="mt-1 text-sm text-slate-500">
-          {users.length} usuario(s). La creación/edición desde la interfaz llega
-          en la siguiente iteración.
-        </p>
+      <header className="flex items-start justify-between">
+        <div>
+          <h1 className="text-2xl text-slate-100">Usuarios</h1>
+          <p className="mt-1 text-sm text-slate-500">{users.length} usuario(s).</p>
+        </div>
+        <NewUserForm />
       </header>
 
       <div className="card overflow-hidden">
