@@ -1,0 +1,170 @@
+// Prisma schema — Plataforma de Gobernanza Corporativa
+//
+// NOTA SOBRE SQLite (desarrollo local):
+//   SQLite no soporta `enum`, `@db.Text` ni el tipo nativo `Json`.
+//   Por eso aquí los enums se modelan como `String` (los valores válidos se
+//   documentan junto a cada campo y se validan en TypeScript con Zod en
+//   `lib/enums.ts`), y `metadata` se guarda como texto JSON.
+//
+//   Para PRODUCCIÓN en Railway (PostgreSQL) solo hay que cambiar el `provider`
+//   de abajo a "postgresql" y la DATABASE_URL. Ver README -> sección Despliegue.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id           String       @id @default(cuid())
+  email        String       @unique
+  name         String
+  passwordHash String
+  totpSecret   String? // cifrado (AES-256-GCM) con clave derivada de NEXTAUTH_SECRET
+  totpEnabled  Boolean      @default(false)
+  role         String       @default("MEMBER") // GlobalRole: SUPER_ADMIN | MEMBER
+  memberships  Membership[]
+  createdAt    DateTime     @default(now())
+  updatedAt    DateTime     @updatedAt
+}
+
+model Committee {
+  id               String       @id @default(cuid())
+  name             String
+  description      String?
+  type             String // CommitteeType: BOARD_OF_DIRECTORS | COMMITTEE | ASSEMBLY
+  quorumPercentage Int          @default(50)
+  members          Membership[]
+  sessions         Session[]
+  documents        Document[]
+  createdAt        DateTime     @default(now())
+}
+
+model Membership {
+  id          String    @id @default(cuid())
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  userId      String
+  committee   Committee @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  committeeId String
+  role        String // CommitteeRole: PRESIDENT | SECRETARY | MEMBER | AUDITOR
+  joinedAt    DateTime  @default(now())
+  leftAt      DateTime?
+  isActive    Boolean   @default(true)
+
+  @@unique([userId, committeeId])
+}
+
+model Document {
+  id            String           @id @default(cuid())
+  committee     Committee        @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  committeeId   String
+  session       Session?         @relation(fields: [sessionId], references: [id])
+  sessionId     String?
+  name          String
+  fileKey       String // clave de storage — NUNCA exponer al cliente
+  mimeType      String
+  sizeBytes     Int
+  version       Int              @default(1)
+  uploadedBy    String // userId
+  extractedText String? // texto plano para búsqueda IA (máx 10.000 chars)
+  accessLogs    DocumentAccess[]
+  createdAt     DateTime         @default(now())
+}
+
+model DocumentAccess {
+  id         String   @id @default(cuid())
+  document   Document @relation(fields: [documentId], references: [id], onDelete: Cascade)
+  documentId String
+  userId     String
+  userName   String
+  accessedAt DateTime @default(now())
+  ipAddress  String?
+  action     String // "view" | "download"
+}
+
+model Session {
+  id          String       @id @default(cuid())
+  committee   Committee    @relation(fields: [committeeId], references: [id], onDelete: Cascade)
+  committeeId String
+  title       String
+  scheduledAt DateTime
+  location    String?
+  status      String       @default("DRAFT") // SessionStatus: DRAFT | CONVENED | IN_PROGRESS | CLOSED | APPROVED
+  agenda      AgendaItem[]
+  attendances Attendance[]
+  documents   Document[]
+  minutes     Minutes?
+  votes       Vote[]
+  createdAt   DateTime     @default(now())
+}
+
+model AgendaItem {
+  id          String  @id @default(cuid())
+  session     Session @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId   String
+  order       Int
+  title       String
+  description String?
+}
+
+model Attendance {
+  id          String    @id @default(cuid())
+  session     Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId   String
+  userId      String
+  userName    String
+  status      String // AttendanceStatus: INVITED | CONFIRMED | ABSENT | EXCUSED
+  confirmedAt DateTime?
+}
+
+model Minutes {
+  id         String    @id @default(cuid())
+  session    Session   @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId  String    @unique
+  content    String // Markdown / rich text
+  aiSummary  String?
+  status     String    @default("DRAFT") // MinutesStatus: DRAFT | UNDER_REVIEW | APPROVED
+  approvedAt DateTime?
+  approvedBy String?
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+}
+
+model Vote {
+  id        String         @id @default(cuid())
+  session   Session        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  sessionId String
+  question  String
+  status    String         @default("OPEN") // VoteStatus: OPEN | CLOSED
+  responses VoteResponse[]
+  createdAt DateTime       @default(now())
+  closedAt  DateTime?
+}
+
+model VoteResponse {
+  id       String   @id @default(cuid())
+  vote     Vote     @relation(fields: [voteId], references: [id], onDelete: Cascade)
+  voteId   String
+  userId   String
+  userName String
+  value    String // "YES" | "NO" | "ABSTAIN"
+  votedAt  DateTime @default(now())
+
+  @@unique([voteId, userId])
+}
+
+model AuditLog {
+  id           String   @id @default(cuid())
+  userId       String
+  userName     String
+  action       String // "recurso.accion" ej: "document.view"
+  resourceId   String?
+  resourceType String?
+  metadata     String? // JSON serializado
+  ipAddress    String?
+  userAgent    String?
+  createdAt    DateTime @default(now())
+}
