@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { requireCommitteeAccess, canManageCommittee } from "@/lib/permissions";
 import AccessDenied from "@/components/AccessDenied";
 import UploadZone from "@/components/documents/UploadZone";
+import SemanticSearch from "@/components/ai/SemanticSearch";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -47,6 +48,8 @@ export default async function DocumentsPage({
       </header>
 
       {canManage && <UploadZone committeeId={params.id} />}
+
+      <SemanticSearch committeeId={params.id} />
 
       {documents.length === 0 ? (
         <div className="card p-6 text-slate-400">

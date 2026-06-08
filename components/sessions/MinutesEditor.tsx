@@ -65,6 +65,28 @@ export default function MinutesEditor({
     }
   }
 
+  async function summarizeAI() {
+    setBusy(true);
+    setMsg("Generando resumen con IA…");
+    try {
+      // Guardar primero para resumir el contenido más reciente.
+      if (editable && editor) await save();
+      const res = await fetch("/api/ai/summarize", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ sessionId }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? "Error");
+      setMsg(null);
+      router.refresh();
+    } catch (e) {
+      setMsg(e instanceof Error ? e.message : "Error");
+    } finally {
+      setBusy(false);
+    }
+  }
+
   async function changeStatus(action: "submit" | "approve") {
     setBusy(true);
     setMsg(null);
@@ -176,9 +198,8 @@ export default function MinutesEditor({
         )}
         <button
           type="button"
-          onClick={() =>
-            setMsg("El módulo de IA (resumen automático) llega en la siguiente iteración.")
-          }
+          onClick={summarizeAI}
+          disabled={busy}
           className={clsx("btn-ghost", !editable && "hidden")}
         >
           Generar resumen con IA
