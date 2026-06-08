@@ -1,8 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+
+// Formatea una fecha al formato que espera <input type="datetime-local">.
+function toLocalInput(d: Date): string {
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
 
 export default function NewSessionPage({
   params,
@@ -12,6 +18,15 @@ export default function NewSessionPage({
   const router = useRouter();
   const [title, setTitle] = useState("");
   const [scheduledAt, setScheduledAt] = useState("");
+
+  // Pre-rellena fecha/hora por defecto (mañana 09:00) tras montar, para evitar
+  // el error "el campo está incompleto" cuando el usuario olvida poner la hora.
+  useEffect(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    d.setHours(9, 0, 0, 0);
+    setScheduledAt(toLocalInput(d));
+  }, []);
   const [location, setLocation] = useState("");
   const [agenda, setAgenda] = useState<{ title: string; description: string }[]>(
     [{ title: "", description: "" }],
@@ -89,6 +104,9 @@ export default function NewSessionPage({
               value={scheduledAt}
               onChange={(e) => setScheduledAt(e.target.value)}
             />
+            <p className="mt-1 text-xs text-slate-500">
+              Recuerda incluir también la hora (ej. 09:00).
+            </p>
           </div>
           <div>
             <label className="label">Lugar o enlace</label>
