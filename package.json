@@ -2,6 +2,9 @@
   "name": "governance-platform",
   "version": "0.1.0",
   "private": true,
+  "engines": {
+    "node": ">=20"
+  },
   "scripts": {
     "predev": "node scripts/db-provider.mjs",
     "dev": "next dev",

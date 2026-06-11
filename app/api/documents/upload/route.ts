@@ -38,7 +38,21 @@ export async function POST(req: Request) {
     const file = form.get("file");
 
     if (!committeeId) throw new HttpError(400, "Falta el comité");
-    if (!(file instanceof File)) throw new HttpError(400, "Falta el archivo");
+    // Validación robusta SIN depender del global `File` (que no existe en
+    // algunas versiones/runtimes de Node): basta con que sea un archivo subido
+    // (un Blob con `name`, `size` y `arrayBuffer`).
+    const isUploadedFile =
+      typeof file === "object" &&
+      file !== null &&
+      typeof (file as { arrayBuffer?: unknown }).arrayBuffer === "function" &&
+      typeof (file as { name?: unknown }).name === "string" &&
+      typeof (file as { size?: unknown }).size === "number";
+    if (!isUploadedFile) throw new HttpError(400, "Falta el archivo");
+    const upload = file as unknown as {
+      name: string;
+      size: number;
+      arrayBuffer: () => Promise<ArrayBuffer>;
+    };
 
     // RBAC: solo secretario/presidente (o super_admin) pueden subir.
     await requireCommitteeAccess(
@@ -47,18 +61,18 @@ export async function POST(req: Request) {
       CommitteeRole.SECRETARY,
     );
 
-    const ext = file.name.split(".").pop()?.toLowerCase() ?? "";
+    const ext = upload.name.split(".").pop()?.toLowerCase() ?? "";
     if (!ALLOWED[ext]) {
       throw new HttpError(
         400,
         "Tipo de archivo no permitido. Usa PDF, DOCX, XLSX o PPTX.",
       );
     }
-    if (file.size > MAX_SIZE) {
+    if (upload.size > MAX_SIZE) {
       throw new HttpError(400, "El archivo supera el máximo de 50 MB.");
     }
 
-    const buffer = Buffer.from(await file.arrayBuffer());
+    const buffer = Buffer.from(await upload.arrayBuffer());
     const fileKey = `${randomUUID()}.${ext}`;
     await putObject(fileKey, buffer);
 
@@ -72,7 +86,7 @@ export async function POST(req: Request) {
       data: {
         committeeId,
         sessionId,
-        name: file.name,
+        name: upload.name,
         fileKey,
         mimeType: ALLOWED[ext],
         sizeBytes: file.size,
@@ -87,7 +101,7 @@ export async function POST(req: Request) {
       action: "document.upload",
       resourceType: "document",
       resourceId: document.id,
-      metadata: { name: file.name, committeeId },
+      metadata: { name: upload.name, committeeId },
       request: req,
     });
 
