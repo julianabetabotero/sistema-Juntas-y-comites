@@ -37,6 +37,24 @@ export async function applyWatermark(
   return pdfDoc.save();
 }
 
+// Genera un PDF de una página con un mensaje (fallback cuando no se puede
+// convertir un documento de Office a PDF).
+export async function buildInfoPdf(message: string): Promise<Uint8Array> {
+  const doc = await PDFDocument.create();
+  const page = doc.addPage([595, 842]);
+  const font = await doc.embedFont(StandardFonts.Helvetica);
+  page.drawText(message, {
+    x: 50,
+    y: 770,
+    size: 13,
+    font,
+    color: rgb(0.25, 0.25, 0.25),
+    maxWidth: 495,
+    lineHeight: 18,
+  });
+  return doc.save();
+}
+
 // Construye el texto de marca de agua para un usuario en el momento de abrir.
 export function buildWatermarkText(userName: string, date = new Date()): string {
   const dd = String(date.getDate()).padStart(2, "0");

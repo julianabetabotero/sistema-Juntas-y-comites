@@ -3,7 +3,8 @@ import { auth } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { requireDocumentAccess } from "@/lib/permissions";
 import { getObject } from "@/lib/storage";
-import { applyWatermark, buildWatermarkText } from "@/lib/watermark";
+import { applyWatermark, buildWatermarkText, buildInfoPdf } from "@/lib/watermark";
+import { officeToPdf } from "@/lib/convert";
 import { log } from "@/lib/audit";
 import { errorResponse, UnauthorizedError } from "@/lib/errors";
 
@@ -64,11 +65,35 @@ export async function GET(
       });
     }
 
-    // Otros formatos: se entregan tal cual (sin marca de agua) de momento.
-    return new NextResponse(Buffer.from(original), {
+    // Otros formatos (DOCX/XLSX/PPTX): convertir a PDF con LibreOffice y
+    // aplicar la marca de agua. Si la conversión no está disponible, se entrega
+    // un PDF de aviso (degradación elegante — nunca rompe la app).
+    const ext = document.name.split(".").pop()?.toLowerCase() ?? "";
+    const watermarkText = buildWatermarkText(session.user.name ?? "Usuario");
+    const convertedPdf = await officeToPdf(Buffer.from(original), ext);
+
+    if (convertedPdf) {
+      const watermarked = await applyWatermark(
+        Buffer.from(convertedPdf),
+        watermarkText,
+      );
+      return new NextResponse(Buffer.from(watermarked), {
+        headers: {
+          "Content-Type": "application/pdf",
+          "Content-Disposition": `inline; filename="${encodeURIComponent(document.name)}.pdf"`,
+          "Cache-Control": "no-store, no-cache, must-revalidate, private",
+        },
+      });
+    }
+
+    const info = await buildInfoPdf(
+      "La vista previa de este documento no está disponible en este entorno. " +
+        "El archivo está almacenado y registrado; ábrelo descargándolo desde el sistema de origen.",
+    );
+    return new NextResponse(Buffer.from(info), {
       headers: {
-        "Content-Type": document.mimeType,
-        "Content-Disposition": `inline; filename="${encodeURIComponent(document.name)}"`,
+        "Content-Type": "application/pdf",
+        "Content-Disposition": "inline",
         "Cache-Control": "no-store, private",
       },
     });

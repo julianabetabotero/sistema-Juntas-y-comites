@@ -47,17 +47,16 @@ export default async function DocumentViewPage({
 
       <div className="grid gap-4 lg:grid-cols-[1fr_260px]">
         <div>
-          {isPdf ? (
-            <DocumentViewerClient
-              documentId={document.id}
-              watermarkText={watermarkText}
-            />
-          ) : (
-            <div className="card p-6 text-sm text-slate-400">
-              Este formato ({document.mimeType}) no se previsualiza con marca de
-              agua en el MVP. La conversión a PDF de DOCX/XLSX/PPTX está prevista
-              para una fase posterior.
-            </div>
+          {/* El endpoint /serve entrega siempre un PDF con marca de agua:
+              los PDF directamente y DOCX/XLSX/PPTX convertidos con LibreOffice. */}
+          <DocumentViewerClient
+            documentId={document.id}
+            watermarkText={watermarkText}
+          />
+          {!isPdf && (
+            <p className="mt-2 text-xs text-slate-500">
+              Documento {document.mimeType.includes("word") ? "Word" : document.mimeType.includes("sheet") ? "Excel" : document.mimeType.includes("presentation") ? "PowerPoint" : "Office"} convertido a PDF para mostrar la marca de agua.
+            </p>
           )}
         </div>
 
