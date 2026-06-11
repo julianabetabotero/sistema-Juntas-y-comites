@@ -3,22 +3,25 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
+    "predev": "node scripts/db-provider.mjs",
     "dev": "next dev",
-    "build": "prisma generate && next build",
+    "build": "node scripts/db-provider.mjs && prisma generate && next build",
     "start": "next start",
+    "start:prod": "node scripts/db-provider.mjs && prisma db push --skip-generate --accept-data-loss && node prisma/seed.mjs && next start -H 0.0.0.0",
     "lint": "next lint",
-    "db:push": "prisma db push",
-    "db:seed": "tsx prisma/seed.ts",
+    "db:push": "node scripts/db-provider.mjs && prisma db push",
+    "db:seed": "node prisma/seed.mjs",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate"
+    "postinstall": "node scripts/db-provider.mjs && prisma generate"
   },
   "prisma": {
-    "seed": "tsx prisma/seed.ts"
+    "seed": "node prisma/seed.mjs"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.27.3",
     "@hookform/resolvers": "^3.10.0",
     "@prisma/client": "^5.22.0",
+    "prisma": "^5.22.0",
     "@tiptap/pm": "^2.27.2",
     "@tiptap/react": "^2.27.2",
     "@tiptap/starter-kit": "^2.27.2",
@@ -49,7 +52,6 @@
     "eslint": "^8",
     "eslint-config-next": "14.2.35",
     "postcss": "^8",
-    "prisma": "^5.22.0",
     "tailwindcss": "^3.4.1",
     "tsx": "^4.22.4",
     "typescript": "^5"

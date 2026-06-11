@@ -106,103 +106,38 @@ Abre <http://localhost:3000>. En el primer login cada usuario configura su 2FA.
 
 ---
 
-## 🗄️ Nota sobre SQLite → PostgreSQL
+## 🗄️ SQLite (local) ↔ PostgreSQL (producción) — automático
 
-En local se usa **SQLite** (cero instalación). SQLite no soporta `enum`,
-`@db.Text` ni `Json`, así que en `prisma/schema.prisma` los enums se modelan como
-`String` (los valores válidos están en `lib/enums.ts`) y `metadata` como texto
-JSON. **Este diseño es portable**: en PostgreSQL funciona igual, solo cambia el
-`provider`. No hace falta reescribir el schema para producción.
+En local se usa **SQLite** (cero instalación). En producción, **PostgreSQL**.
+El cambio es **automático**: el script `scripts/db-provider.mjs` ajusta el
+`provider` del schema según la variable `DATABASE_PROVIDER` (por defecto
+`sqlite`; en Railway se pone `postgresql`). No hay que editar el schema a mano.
+
+Los enums se modelan como `String` y `metadata` como texto JSON, así que el
+mismo schema es 100% portable entre ambos motores.
 
 ---
 
-## ☁️ Desplegar: GitHub + Railway
+## ☁️ Desplegar en internet
 
-### Paso 1 — Subir a GitHub
+👉 **Guía completa paso a paso:** [`DESPLIEGUE.md`](DESPLIEGUE.md)
 
-```bash
-# Dentro de la carpeta governance-platform/
-git init
-git add .
-git commit -m "MVP plataforma de gobernanza corporativa"
+Resumen: subes el repo a GitHub → en Railway *Deploy from GitHub repo* → agregas
+el plugin **PostgreSQL** → defines las variables (`DATABASE_PROVIDER=postgresql`,
+`DATABASE_URL=${{Postgres.DATABASE_URL}}`, `NEXTAUTH_SECRET`/`AUTH_SECRET`,
+`NEXTAUTH_URL`/`AUTH_URL`, `AUTH_TRUST_HOST=true`) → generas el dominio. El
+`railway.json` ya define el build y el arranque (`npm run start:prod`), que
+**crea las tablas y siembra los datos demo automáticamente**.
 
-# Crea un repo vacío en github.com (o con gh):
-#   gh repo create governance-platform --private --source=. --remote=origin --push
-# o manualmente:
-git branch -M main
-git remote add origin https://github.com/TU_USUARIO/governance-platform.git
-git push -u origin main
-```
+Para que los **documentos** persistan, añade un **volumen** montado en
+`/app/uploads` (ver `DESPLIEGUE.md` → Parte C). Alternativa para escala: S3
+(`STORAGE_TYPE=s3`, implementar las ramas marcadas en `lib/storage.ts`).
 
-> El `.gitignore` ya excluye `.env`, `node_modules`, la BD local y `/uploads`.
-> **Nunca subas tu `.env`.**
+### Usuarios demo (contraseña `Demo1234!`)
 
-### Paso 2 — Cambiar a PostgreSQL para producción
-
-Edita `prisma/schema.prisma` y cambia el provider:
-
-```prisma
-datasource db {
-  provider = "postgresql"   // antes: "sqlite"
-  url      = env("DATABASE_URL")
-}
-```
-
-Haz commit de ese cambio. (En local puedes seguir con SQLite en una rama, o
-instalar Postgres local; para el despliegue lo importante es que `main` use
-`postgresql`.)
-
-### Paso 3 — Crear el proyecto en Railway
-
-1. Entra a <https://railway.app> → **New Project** → **Deploy from GitHub repo**
-   → elige tu repo.
-2. En el proyecto, **+ New → Database → PostgreSQL**. Railway crea la base de
-   datos y expone su URL.
-3. En el **servicio web** (tu app), pestaña **Variables**, añade:
-
-   ```env
-   DATABASE_URL=${{Postgres.DATABASE_URL}}   # referencia al plugin de Postgres
-   NEXTAUTH_SECRET=<un secreto de 32+ chars>
-   AUTH_SECRET=<el mismo secreto>
-   NEXTAUTH_URL=https://<tu-app>.up.railway.app
-   AUTH_URL=https://<tu-app>.up.railway.app
-   AUTH_TRUST_HOST=true
-   STORAGE_TYPE=s3            # ver nota de almacenamiento abajo
-   ANTHROPIC_API_KEY=         # opcional (módulo IA)
-   ```
-
-   > Railway define `DATABASE_URL` automáticamente si referencias el plugin con
-   > `${{Postgres.DATABASE_URL}}`.
-
-4. **Build & Deploy settings** del servicio:
-   - **Build command:** `npm run build`  (ya ejecuta `prisma generate`)
-   - **Start command:** `npx prisma db push && npm run start`
-     (el `db push` crea las tablas en Postgres en cada deploy; es idempotente).
-
-5. (Una sola vez) Para sembrar datos demo en producción, abre la consola del
-   servicio en Railway y ejecuta:
-
-   ```bash
-   npm run db:seed
-   ```
-
-6. Railway te dará una URL pública. Asegúrate de que `NEXTAUTH_URL`/`AUTH_URL`
-   coincidan con ella y haz un redeploy.
-
-### Paso 4 — Almacenamiento de documentos en producción ⚠️
-
-El sistema de archivos de Railway es **efímero**: los archivos subidos a
-`/uploads` se pierden en cada redeploy. Para producción usa **S3** (o un bucket
-compatible):
-
-1. Crea un bucket S3 y unas credenciales IAM.
-2. Variables: `STORAGE_TYPE=s3`, `AWS_REGION`, `AWS_ACCESS_KEY_ID`,
-   `AWS_SECRET_ACCESS_KEY`, `AWS_S3_BUCKET`.
-3. Implementa las ramas S3 en `lib/storage.ts` (hay marcadores) e instala
-   `@aws-sdk/client-s3`.
-
-Para una demo rápida puedes dejar `STORAGE_TYPE=local`, sabiendo que los
-documentos no persisten entre despliegues.
+`superadmin@empresa.com` · `presidente@empresa.com` · `secretario@empresa.com`
+· `miembro@empresa.com` · `auditor@empresa.com`. Cada uno configura su 2FA en el
+primer inicio de sesión.
 
 ---
 
