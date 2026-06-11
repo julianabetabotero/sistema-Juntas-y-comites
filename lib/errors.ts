@@ -35,7 +35,11 @@ export function errorResponse(err: unknown): NextResponse {
   }
   console.error("[api] error no controlado:", err);
   return NextResponse.json(
-    { error: "Error interno del servidor" },
+    {
+      error: "Error interno del servidor",
+      // TEMP DEBUG: detalle para diagnosticar en producción (se quitará).
+      detail: err instanceof Error ? `${err.name}: ${err.message}` : String(err),
+    },
     { status: 500 },
   );
 }
